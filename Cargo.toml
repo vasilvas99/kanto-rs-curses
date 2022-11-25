@@ -1,0 +1,31 @@
+[package]
+name = "kanto-curses"
+version = "0.1.0"
+edition = "2021"
+authors = ["Vasil Ivanov ivanovvasil99@gmail.com"]
+license = "GPL2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "kantocurses"
+path = "src/lib.rs"
+
+[[bin]]
+name = "kantocurses"
+path = "src/main.rs"
+
+[dependencies]
+prost = "0.11"
+tokio = { version = "1.0", features = [ "rt-multi-thread", "time", "fs", "macros", "net",] }
+tokio-stream = { version = "0.1", features = ["net"] }
+tonic = {version = "0.8.2" }
+tower = { version = "0.4" }
+http = "0.2"
+hyper = { version = "0.14", features = ["full"] }
+serde = { version = "1.0.147", features = ["derive"] }
+serde_json = { version = "1.0.89", default-features = false, features = ["alloc"] }
+
+
+[build-dependencies]
+tonic-build =  "0.8.2"
