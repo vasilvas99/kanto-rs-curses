@@ -9,8 +9,8 @@ mod containers {
     //This is a hack because tonic has an issue with deeply nested protobufs
     tonic::include_proto!("mod");
 }
-use containers::github::com::eclipse_kanto::container_management::containerm::api::services::containers::{self as cm_rpc, CreateContainerResponse};
-use containers::github::com::eclipse_kanto::container_management::containerm::api::types::containers::{self as cm_types, Container};
+pub use containers::github::com::eclipse_kanto::container_management::containerm::api::services::containers::{self as cm_rpc, CreateContainerResponse};
+pub use containers::github::com::eclipse_kanto::container_management::containerm::api::types::containers::{self as cm_types, Container};
 
 const CONT_TEMPLATE: &'static str = include_str!("container_json_template.in");
 
