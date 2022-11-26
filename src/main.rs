@@ -1,36 +1,41 @@
-use tokio::sync::mpsc;
+use cursive::{align::HAlign, views::StackView};
+use cursive::traits::*;
+use cursive::views::Dialog;
+use cursive_table_view::{TableView, TableViewItem};
 use kantocurses::kanto_api;
+use std::cmp::Ordering;
+use tokio::sync::mpsc;
 
 #[derive(Debug)]
 enum KantoRequest {
     ListContainers,
     CreateContainer(String, String), // Name, Registry
-    StartContainer(String), // Name
-    StopContainer(String, i64), // Name, timeout
-    RemoveContainer(String) // Name
+    StartContainer(String),          // Name
+    StopContainer(String, i64),      // Name, timeout
+    RemoveContainer(String),         // Name
 }
 
 #[cfg(unix)]
 #[tokio::main]
 async fn tokio_main(
-    response_tx: mpsc::Sender<Vec<kanto_api::Container>>, 
+    response_tx: mpsc::Sender<Vec<kanto_api::Container>>,
     request_rx: &mut mpsc::Receiver<KantoRequest>,
     socket_path: &str,
 ) -> kanto_api::Result<()> {
     let mut c = kanto_api::get_connection(socket_path).await?;
     loop {
-        if let Some(request)  = request_rx.recv().await {
+        if let Some(request) = request_rx.recv().await {
             match request {
                 KantoRequest::ListContainers => {
                     let r = kantocurses::kanto_api::list_containers(&mut c).await?;
                     response_tx.send(r).await?;
-                },
-                KantoRequest::CreateContainer(name,registry) => {
+                }
+                KantoRequest::CreateContainer(name, registry) => {
                     kanto_api::create_container(&mut c, &name, &registry).await?;
-                },
+                }
                 KantoRequest::StartContainer(name) => {
                     kanto_api::start_container(&mut c, &name).await?;
-                },
+                }
                 KantoRequest::StopContainer(name, timeout) => {
                     kanto_api::stop_container(&mut c, &name, timeout).await?;
                 }
@@ -39,72 +44,32 @@ async fn tokio_main(
                 }
             }
         }
-       
     }
 }
-
-// Two threads are spawned - one for sync and one for async code. Async code interfaces with kanto-cm and sends the current state of the containers
-// down the channel. The main thread is only concerned with printing the state 
-// TODO: Add a second channel that sends request to the async runtime such as create, start, stop etc.
-// TODO-TUI: Add buttons that send the CRUD requests to async thread and print the result (open loop system)
-// fn main()  -> Result<(), Box<dyn std::error::Error>>{
-//     let (tx_containers, mut rx_containers) = mpsc::channel::<Vec<kanto_api::Container>>(32);
-//     let (tx_requests, mut rx_requests) = mpsc::channel::<KantoRequest>(32);
-//     let socket = "/run/container-management/container-management.sock";
-
-//     std::thread::spawn(move || {
-//         tokio_main(tx_containers, &mut rx_requests, socket).expect("Error in io thread");
-//     });
-
-//     loop {
-//         tx_requests.blocking_send(KantoRequest::ListContainers)?;
-//         match rx_containers.try_recv() {
-//             Ok(val) => println!("{:#?}", val),
-//             Err(_e) => {},
-//         }
-//     }
-
-// }
-
-use cursive::{views::TextView, view::Nameable};
-use rand::Rng;
-use cursive_table_view::{TableView, TableViewItem};
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 enum ContainerColumn {
     ID,
     Name,
     Image,
-    Running
+    Running,
 }
 
-impl ContainerColumn {
-    fn as_str(&self) -> &str {
-        match *self {
-            ContainerColumn::ID => "ID",
-            ContainerColumn::Name => "Name",
-            ContainerColumn::Image => "Image",
-            ContainerColumn::Running => "Running"
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug)]
 struct ContainersTable {
-    ID: String,
-    Name: String,
-    Image: String,
-    Running: String
+    id: String,
+    name: String,
+    image: String,
+    running: String,
 }
 
-impl TableViewItem<ContainerColumn> for <ContainersTable> {
+impl TableViewItem<ContainerColumn> for ContainersTable {
     fn to_column(&self, column: ContainerColumn) -> String {
         match column {
-            ContainerColumn::ID => format!("{}", self.ID),
-            ContainerColumn::Name => format!("{}", self.Name),
-            ContainerColumn::Image => format!("{}", self.Image),
-            ContainerColumn::Running => format!("{}", self.Running),
-
+            ContainerColumn::ID => self.id.to_string(),
+            ContainerColumn::Name => self.name.to_string(),
+            ContainerColumn::Image => self.image.to_string(),
+            ContainerColumn::Running => self.running.to_string(),
         }
     }
 
@@ -113,28 +78,84 @@ impl TableViewItem<ContainerColumn> for <ContainersTable> {
         Self: Sized,
     {
         match column {
-            ContainerColumn::ID => self.name.cmp(&other.ID),
-            ContainerColumn::Name => self.name.cmp(&other.Name),
-            ContainerColumn::Image => self.name.cmp(&other.Image),
-            ContainerColumn::Running => self.name.cmp(&other.Running),
+            ContainerColumn::ID => self.id.cmp(&other.id),
+            ContainerColumn::Name => self.name.cmp(&other.name),
+            ContainerColumn::Image => self.image.cmp(&other.image),
+            ContainerColumn::Running => self.running.cmp(&other.running),
         }
     }
 }
 
-fn main() {
-	let mut siv = cursive::default();
-    
-    let mut tv = TextView::new("Hello cursive! Press <q> to quit.")
-                                .with_name("something");
-    
-	siv.add_layer(tv);
-    siv.set_fps(5);
+fn items_to_columns(req_items: Vec<kanto_api::Container>) -> Vec<ContainersTable> {
+    let mut out: Vec<ContainersTable> = vec![];
 
-    let mut rng = rand::thread_rng();
-    
+    for c in req_items {
+        let running = if c.state.expect("Missing field").running {
+            String::from("Yes")
+        } else {
+            String::from("No")
+        };
+
+        out.push(ContainersTable {
+            id: c.id,
+            name: c.name,
+            image: c.image.expect("Missing field").name,
+            running,
+        })
+    }
+    out.sort_by(|a, b| a.id.cmp(&b.id));
+    out
+}
+
+fn run_ui(
+    tx_requests: mpsc::Sender<KantoRequest>,
+    mut rx_containers: mpsc::Receiver<Vec<kanto_api::Container>>,
+) {
+    let mut siv = cursive::default();
+    let table = TableView::<ContainersTable, ContainerColumn>::new()
+        .column(ContainerColumn::ID, "ID", |c| c.width_percent(20))
+        .column(ContainerColumn::Name, "Name", |c| c.align(HAlign::Center))
+        .column(ContainerColumn::Image, "Image", |c| {
+            c.ordering(Ordering::Greater)
+                .align(HAlign::Right)
+                .width_percent(20)
+        })
+        .column(ContainerColumn::Running, "Running", |c| {
+            c.align(HAlign::Center)
+        });
+
+    let mut stack = StackView::new();
+    stack.add_layer(
+        Dialog::around(table.with_name("table").min_size((100, 50))).title("Kanto-CM curses"),
+    );
+
+    siv.add_layer(stack);
+    siv.set_fps(3);
+
     siv.add_global_callback(cursive::event::Event::Refresh, move |s| {
-        let mut text = s.find_name::<TextView>("something").unwrap();
-        text.set_content(format!("{}", rng.gen::<f64>()));
+        tx_requests
+            .blocking_send(KantoRequest::ListContainers)
+            .expect("Could not send");
+        match rx_containers.try_recv() {
+            Ok(val) => {
+                let mut t = s
+                    .find_name::<TableView<ContainersTable, ContainerColumn>>("table")
+                    .expect("Crap");
+                t.set_items(items_to_columns(val));
+            }
+            Err(_e) => {}
+        }
     });
-	siv.run();
+    siv.run();
+}
+fn main() {
+    let (tx_containers, mut rx_containers) = mpsc::channel::<Vec<kanto_api::Container>>(32);
+    let (tx_requests, mut rx_requests) = mpsc::channel::<KantoRequest>(32);
+    let socket = "/run/container-management/container-management.sock";
+
+    std::thread::spawn(move || {
+        tokio_main(tx_containers, &mut rx_requests, socket).expect("Error in io thread");
+    });
+
+    run_ui(tx_requests, rx_containers);
 }
