@@ -126,7 +126,15 @@ fn run_ui(
 
     let mut stack = StackView::new();
     stack.add_layer(
-        Dialog::around(table.with_name("table").min_size((100, 50))).title("Kanto-CM curses"),
+        Dialog::around(
+        table
+        .with_name("table")
+        .min_size((100, 50)))
+        .title("Kanto-CM curses")
+        .button("Create", |s| {todo!()})
+        .button("Start", |s| {todo!()})
+        .button("Stop", |s| {todo!()})
+        .button("Remove", |s| {todo!()})
     );
 
     siv.add_layer(stack);
