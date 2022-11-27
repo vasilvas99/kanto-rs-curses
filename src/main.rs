@@ -129,7 +129,7 @@ fn run_ui(
         Dialog::around(
         table
         .with_name("table")
-        .min_size((100, 50)))
+        .min_size((100, 150)))
         .title("Kanto-CM curses")
         .button("Create", |s| {todo!()})
         .button("Start", |s| {todo!()})
@@ -149,7 +149,11 @@ fn run_ui(
                 let mut t = s
                     .find_name::<TableView<ContainersTable, ContainerColumn>>("table")
                     .expect("Crap");
+                let last_item = t.item();
                 t.set_items(items_to_columns(val));
+                if let Some(idx) = last_item {
+                    t.set_selected_item(idx);
+                }
             }
             Err(_e) => {}
         }
