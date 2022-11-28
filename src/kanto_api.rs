@@ -46,9 +46,10 @@ pub async fn create_container(
 
 pub async fn get_container_by_name(channel: &mut ClientChannel, name: &str) -> Result<Container> {
     let all_containers = list_containers(channel).await?;
+    eprintln!("{:#?}", name);
     let cont = all_containers
         .into_iter()
-        .find(|c| c.name == name)
+        .find(|c| c.name == String::from(name))
         .ok_or("Container not found")?;
 
     Ok(cont)

@@ -29,6 +29,7 @@ async fn tokio_main(
     loop {
         if let Some(request) = request_rx.recv().await {
             match request {
+                // Handle errors io thread! Otherwise the whole thing crashes a lot!
                 KantoRequest::ListContainers => {
                     let r = kantocurses::kanto_api::list_containers(&mut c).await?;
                     response_tx.send(r).await?;
@@ -37,10 +38,10 @@ async fn tokio_main(
                     kanto_api::create_container(&mut c, &name, &registry).await?;
                 }
                 KantoRequest::StartContainer(name) => {
-                    kanto_api::start_container(&mut c, &name).await?;
+                    kanto_api::start_container(&mut c, &name).await?; // here
                 }
                 KantoRequest::StopContainer(name, timeout) => {
-                    kanto_api::stop_container(&mut c, &name, timeout).await?;
+                    kanto_api::stop_container(&mut c, &name, timeout).await?; // here
                 }
                 KantoRequest::RemoveContainer(name) => {
                     kanto_api::remove_container(&mut c, &name, true).await?;
@@ -63,13 +64,34 @@ fn run_ui(
             c.ordering(Ordering::Greater).align(HAlign::Right).width_percent(20)
         })
         .column(ContainerColumn::Running, "Running", |c| { c.align(HAlign::Center) });
-
+    
+    // TODO: cleanup here. Fix callback mess
+    let tx_req = tx_requests.clone();
+    let tx_req_2 = tx_requests.clone();
     siv.add_layer(
         Dialog::around(table.with_name("table").min_size((100, 150)))
             .title("Kanto-CM curses")
             .button("Create", |s| { todo!() })
-            .button("Start", |s| { todo!() })
-            .button("Stop", |s| { todo!() })
+            .button("Start", move |s| {
+                let mut t = s
+                .find_name::<TableView<ContainersTable, ContainerColumn>>("table")
+                .expect("Crap");
+                if let Some(container_idx) = t.item() {
+                    if let Some(container) = t.borrow_item(container_idx) {
+                        tx_req.blocking_send(KantoRequest::StartContainer(container.name.clone()));
+                    }
+                }
+             })
+            .button("Stop", move |s| {
+                let mut t = s
+                .find_name::<TableView<ContainersTable, ContainerColumn>>("table")
+                .expect("Crap");
+                if let Some(container_idx) = t.item() {
+                    if let Some(container) = t.borrow_item(container_idx) {
+                        tx_req_2.blocking_send(KantoRequest::StopContainer(container.name.clone(), 5));
+                    }
+                }
+             })
             .button("Remove", |s| { todo!() })
     );
 
