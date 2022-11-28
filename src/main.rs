@@ -5,6 +5,7 @@ use cursive_table_view::TableView;
 use kantocurses::kanto_api;
 use std::cmp::Ordering;
 use tokio::sync::mpsc;
+use nix::unistd::Uid;
 
 pub mod containers_table_view;
 use containers_table_view::*;
@@ -38,13 +39,13 @@ async fn tokio_main(
                     kanto_api::create_container(&mut c, &name, &registry).await?;
                 }
                 KantoRequest::StartContainer(name) => {
-                    kanto_api::start_container(&mut c, &name).await?; // here
+                    kanto_api::start_container(&mut c, &name).await; // add error handling
                 }
                 KantoRequest::StopContainer(name, timeout) => {
-                    kanto_api::stop_container(&mut c, &name, timeout).await?; // here
+                    kanto_api::stop_container(&mut c, &name, timeout).await; // add error handling
                 }
                 KantoRequest::RemoveContainer(name) => {
-                    kanto_api::remove_container(&mut c, &name, true).await?;
+                    kanto_api::remove_container(&mut c, &name, true).await; // add error handling
                 }
             }
         }
@@ -81,7 +82,6 @@ fn run_ui(
             c.align(HAlign::Center)
         });
 
-    // TODO: cleanup here. Fix callback mess
     siv.add_layer(
         Dialog::around(table.with_name("table").min_size((100, 150)))
             .title("Kanto-CM curses")
@@ -103,8 +103,9 @@ fn run_ui(
             }))
     );
 
-    siv.set_fps(3);
+    siv.set_fps(5);
 
+    // Do a similar cleanup to buttons
     siv.add_global_callback(cursive::event::Event::Refresh, move |s| {
         tx_requests
             .blocking_send(KantoRequest::ListContainers)
@@ -128,9 +129,16 @@ fn run_ui(
     Ok(())
 }
 fn main() -> kanto_api::Result<()> {
+
+    if !Uid::effective().is_root() {
+        eprintln!("You must run this executable as root");
+        std::process::exit(-1);
+    }
+
     let (tx_containers, rx_containers) = mpsc::channel::<Vec<kanto_api::Container>>(32);
     let (tx_requests, mut rx_requests) = mpsc::channel::<KantoRequest>(32);
     let socket = "/run/container-management/container-management.sock";
+
 
     std::thread::spawn(move || {
         tokio_main(tx_containers, &mut rx_requests, socket).expect("Error in io thread");

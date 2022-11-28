@@ -27,6 +27,8 @@ serde = { version = "1.0.147", features = ["derive"] }
 serde_json = { version = "1.0.89", default-features = false, features = ["alloc"] }
 cursive_table_view = "0.14.0"
 glib = "0.16.3"
+nix = "0.25.0"
+
 [dependencies.cursive]
 version = "0.20.0"
 features = ["crossterm-backend"]
