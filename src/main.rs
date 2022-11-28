@@ -1,18 +1,18 @@
-use cursive::{ align::HAlign, views::StackView };
-use cursive::traits::*;
+use cursive::align::HAlign;
+use cursive::{traits::*, Cursive};
 use cursive::views::Dialog;
 use kantocurses::kanto_api;
 use tokio::sync::mpsc;
 use std::cmp::Ordering;
-use cursive_table_view::{ TableView, TableViewItem };
+use cursive_table_view::TableView;
 
-pub mod ContainersTableView;
-use ContainersTableView::*;
+pub mod containers_table_view;
+use containers_table_view::*;
 
 #[derive(Debug)]
 enum KantoRequest {
     ListContainers,
-    CreateContainer(String, String), // Name, Registry
+    _CreateContainer(String, String), // Name, Registry
     StartContainer(String), // Name
     StopContainer(String, i64), // Name, timeout
     RemoveContainer(String), // Name
@@ -34,7 +34,7 @@ async fn tokio_main(
                     let r = kantocurses::kanto_api::list_containers(&mut c).await?;
                     response_tx.send(r).await?;
                 }
-                KantoRequest::CreateContainer(name, registry) => {
+                KantoRequest::_CreateContainer(name, registry) => {
                     kanto_api::create_container(&mut c, &name, &registry).await?;
                 }
                 KantoRequest::StartContainer(name) => {
@@ -51,10 +51,25 @@ async fn tokio_main(
     }
 }
 
+
+
+fn get_current_container (s: &mut Cursive) -> Option<ContainersTable> {
+    let t = s
+    .find_name::<TableView<ContainersTable, ContainerColumn>>("table")
+    .expect("Crap");
+
+    if let Some(container_idx) = t.item() {
+        if let Some(container) = t.borrow_item(container_idx) {
+            return Some(container.clone()); // small enough struct to be worth it
+        }
+    }
+    None
+}
+
 fn run_ui(
     tx_requests: mpsc::Sender<KantoRequest>,
     mut rx_containers: mpsc::Receiver<Vec<kanto_api::Container>>
-) {
+) -> kanto_api::Result<()> {
     let mut siv = cursive::default();
     let table = TableView::<ContainersTable, ContainerColumn>
         ::new()
@@ -66,33 +81,25 @@ fn run_ui(
         .column(ContainerColumn::Running, "Running", |c| { c.align(HAlign::Center) });
     
     // TODO: cleanup here. Fix callback mess
-    let tx_req = tx_requests.clone();
-    let tx_req_2 = tx_requests.clone();
     siv.add_layer(
         Dialog::around(table.with_name("table").min_size((100, 150)))
             .title("Kanto-CM curses")
-            .button("Create", |s| { todo!() })
-            .button("Start", move |s| {
-                let mut t = s
-                .find_name::<TableView<ContainersTable, ContainerColumn>>("table")
-                .expect("Crap");
-                if let Some(container_idx) = t.item() {
-                    if let Some(container) = t.borrow_item(container_idx) {
-                        tx_req.blocking_send(KantoRequest::StartContainer(container.name.clone()));
-                    }
+            .button("Create", |_s| { todo!() })
+            .button("Start",  glib::clone!(@strong tx_requests => move |s| {
+                if let Some(c) = get_current_container(s) {
+                    tx_requests.blocking_send(KantoRequest::StartContainer(c.name.clone())).expect("IO thread dead");
                 }
-             })
-            .button("Stop", move |s| {
-                let mut t = s
-                .find_name::<TableView<ContainersTable, ContainerColumn>>("table")
-                .expect("Crap");
-                if let Some(container_idx) = t.item() {
-                    if let Some(container) = t.borrow_item(container_idx) {
-                        tx_req_2.blocking_send(KantoRequest::StopContainer(container.name.clone(), 5));
-                    }
+            }))
+            .button("Stop", glib::clone!(@strong tx_requests => move |s| {
+                if let Some(c) = get_current_container(s) {
+                    tx_requests.blocking_send(KantoRequest::StopContainer(c.name.clone(), 5)).expect("IO thread dead");
                 }
-             })
-            .button("Remove", |s| { todo!() })
+            }))
+            .button("Remove", glib::clone!(@strong tx_requests => move |s| {
+                if let Some(c) = get_current_container(s) {
+                    tx_requests.blocking_send(KantoRequest::RemoveContainer(c.name.clone())).expect("IO thread dead");
+                }
+            }))
     );
 
     siv.set_fps(3);
@@ -115,9 +122,10 @@ fn run_ui(
         }
     });
     siv.run();
+    Ok(())
 }
-fn main() {
-    let (tx_containers, mut rx_containers) = mpsc::channel::<Vec<kanto_api::Container>>(32);
+fn main() -> kanto_api::Result<()>{
+    let (tx_containers, rx_containers) = mpsc::channel::<Vec<kanto_api::Container>>(32);
     let (tx_requests, mut rx_requests) = mpsc::channel::<KantoRequest>(32);
     let socket = "/run/container-management/container-management.sock";
 
@@ -125,5 +133,6 @@ fn main() {
         tokio_main(tx_containers, &mut rx_requests, socket).expect("Error in io thread");
     });
 
-    run_ui(tx_requests, rx_containers);
+    run_ui(tx_requests, rx_containers)?;
+    Ok(())
 }

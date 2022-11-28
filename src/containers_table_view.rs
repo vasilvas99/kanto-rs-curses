@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use cursive_table_view::{ TableView, TableViewItem };
+use cursive_table_view::TableViewItem;
 use kantocurses::kanto_api;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
