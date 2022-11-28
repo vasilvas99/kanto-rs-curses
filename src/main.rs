@@ -2,7 +2,7 @@ use cursive::align::HAlign;
 use cursive::views::Dialog;
 use cursive::{traits::*, Cursive};
 use cursive_table_view::TableView;
-use kantocurses::kanto_api;
+use kantocurses::{kanto_api, clone};
 use std::cmp::Ordering;
 use tokio::sync::mpsc;
 use nix::unistd::Uid;
@@ -86,17 +86,17 @@ fn run_ui(
         Dialog::around(table.with_name("table").min_size((100, 150)))
             .title("Kanto-CM curses")
             .button("Create", |_s| { todo!() })
-            .button("Start",  glib::clone!(@strong tx_requests => move |s| {
+            .button("Start",  clone!(tx_requests => move |s| {
                 if let Some(c) = get_current_container(s) {
                     tx_requests.blocking_send(KantoRequest::StartContainer(c.name.clone())).expect("IO thread dead");
                 }
             }))
-            .button("Stop", glib::clone!(@strong tx_requests => move |s| {
+            .button("Stop", clone!(tx_requests => move |s| {
                 if let Some(c) = get_current_container(s) {
                     tx_requests.blocking_send(KantoRequest::StopContainer(c.name.clone(), 5)).expect("IO thread dead");
                 }
             }))
-            .button("Remove", glib::clone!(@strong tx_requests => move |s| {
+            .button("Remove", clone!(tx_requests => move |s| {
                 if let Some(c) = get_current_container(s) {
                     tx_requests.blocking_send(KantoRequest::RemoveContainer(c.name.clone())).expect("IO thread dead");
                 }
