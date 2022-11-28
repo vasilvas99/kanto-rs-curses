@@ -49,7 +49,7 @@ pub async fn get_container_by_name(channel: &mut ClientChannel, name: &str) -> R
     eprintln!("{:#?}", name);
     let cont = all_containers
         .into_iter()
-        .find(|c| c.name == String::from(name))
+        .find(|c| c.name == name)
         .ok_or("Container not found")?;
 
     Ok(cont)
