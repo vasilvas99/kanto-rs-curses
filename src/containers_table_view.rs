@@ -1,6 +1,6 @@
-use std::cmp::Ordering;
 use cursive_table_view::TableViewItem;
 use kantocurses::kanto_api;
+use std::cmp::Ordering;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum ContainerColumn {
@@ -28,7 +28,10 @@ impl TableViewItem<ContainerColumn> for ContainersTable {
         }
     }
 
-    fn cmp(&self, other: &Self, column: ContainerColumn) -> Ordering where Self: Sized {
+    fn cmp(&self, other: &Self, column: ContainerColumn) -> Ordering
+    where
+        Self: Sized,
+    {
         match column {
             ContainerColumn::ID => self.id.cmp(&other.id),
             ContainerColumn::Name => self.name.cmp(&other.name),

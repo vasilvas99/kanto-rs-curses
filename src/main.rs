@@ -1,10 +1,10 @@
 use cursive::align::HAlign;
-use cursive::{traits::*, Cursive};
 use cursive::views::Dialog;
-use kantocurses::kanto_api;
-use tokio::sync::mpsc;
-use std::cmp::Ordering;
+use cursive::{traits::*, Cursive};
 use cursive_table_view::TableView;
+use kantocurses::kanto_api;
+use std::cmp::Ordering;
+use tokio::sync::mpsc;
 
 pub mod containers_table_view;
 use containers_table_view::*;
@@ -13,9 +13,9 @@ use containers_table_view::*;
 enum KantoRequest {
     ListContainers,
     _CreateContainer(String, String), // Name, Registry
-    StartContainer(String), // Name
-    StopContainer(String, i64), // Name, timeout
-    RemoveContainer(String), // Name
+    StartContainer(String),           // Name
+    StopContainer(String, i64),       // Name, timeout
+    RemoveContainer(String),          // Name
 }
 
 #[cfg(unix)]
@@ -23,7 +23,7 @@ enum KantoRequest {
 async fn tokio_main(
     response_tx: mpsc::Sender<Vec<kanto_api::Container>>,
     request_rx: &mut mpsc::Receiver<KantoRequest>,
-    socket_path: &str
+    socket_path: &str,
 ) -> kanto_api::Result<()> {
     let mut c = kanto_api::get_connection(socket_path).await?;
     loop {
@@ -51,12 +51,10 @@ async fn tokio_main(
     }
 }
 
-
-
-fn get_current_container (s: &mut Cursive) -> Option<ContainersTable> {
+fn get_current_container(s: &mut Cursive) -> Option<ContainersTable> {
     let t = s
-    .find_name::<TableView<ContainersTable, ContainerColumn>>("table")
-    .expect("Crap");
+        .find_name::<TableView<ContainersTable, ContainerColumn>>("table")
+        .expect("Crap");
 
     if let Some(container_idx) = t.item() {
         if let Some(container) = t.borrow_item(container_idx) {
@@ -68,18 +66,21 @@ fn get_current_container (s: &mut Cursive) -> Option<ContainersTable> {
 
 fn run_ui(
     tx_requests: mpsc::Sender<KantoRequest>,
-    mut rx_containers: mpsc::Receiver<Vec<kanto_api::Container>>
+    mut rx_containers: mpsc::Receiver<Vec<kanto_api::Container>>,
 ) -> kanto_api::Result<()> {
     let mut siv = cursive::default();
-    let table = TableView::<ContainersTable, ContainerColumn>
-        ::new()
+    let table = TableView::<ContainersTable, ContainerColumn>::new()
         .column(ContainerColumn::ID, "ID", |c| c.width_percent(20))
         .column(ContainerColumn::Name, "Name", |c| c.align(HAlign::Center))
         .column(ContainerColumn::Image, "Image", |c| {
-            c.ordering(Ordering::Greater).align(HAlign::Right).width_percent(20)
+            c.ordering(Ordering::Greater)
+                .align(HAlign::Right)
+                .width_percent(20)
         })
-        .column(ContainerColumn::Running, "Running", |c| { c.align(HAlign::Center) });
-    
+        .column(ContainerColumn::Running, "Running", |c| {
+            c.align(HAlign::Center)
+        });
+
     // TODO: cleanup here. Fix callback mess
     siv.add_layer(
         Dialog::around(table.with_name("table").min_size((100, 150)))
@@ -105,7 +106,9 @@ fn run_ui(
     siv.set_fps(3);
 
     siv.add_global_callback(cursive::event::Event::Refresh, move |s| {
-        tx_requests.blocking_send(KantoRequest::ListContainers).expect("Could not send");
+        tx_requests
+            .blocking_send(KantoRequest::ListContainers)
+            .expect("Could not send");
         match rx_containers.try_recv() {
             Ok(val) => {
                 let mut t = s
@@ -124,7 +127,7 @@ fn run_ui(
     siv.run();
     Ok(())
 }
-fn main() -> kanto_api::Result<()>{
+fn main() -> kanto_api::Result<()> {
     let (tx_containers, rx_containers) = mpsc::channel::<Vec<kanto_api::Container>>(32);
     let (tx_requests, mut rx_requests) = mpsc::channel::<KantoRequest>(32);
     let socket = "/run/container-management/container-management.sock";
