@@ -116,7 +116,7 @@ fn run_ui(
         Dialog::around(
             table
                 .with_name(table::TABLE_IDENTIFIER)
-                .min_size((100, 150)),
+                .min_size((200, 200)),
         )
         .title("Kanto-CM curses")
         // .button("Create", |_s| { todo!() })
