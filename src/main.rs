@@ -85,20 +85,20 @@ fn run_ui(
     siv.add_layer(
         Dialog::around(table.with_name("table").min_size((100, 150)))
             .title("Kanto-CM curses")
-            .button("Create", |_s| { todo!() })
+            // .button("Create", |_s| { todo!() })
             .button("Start",  clone!(tx_requests => move |s| {
                 if let Some(c) = get_current_container(s) {
-                    tx_requests.blocking_send(KantoRequest::StartContainer(c.name.clone())).expect("IO thread dead");
+                    tx_requests.blocking_send(KantoRequest::StartContainer(c.name.clone())); // add error handling
                 }
             }))
             .button("Stop", clone!(tx_requests => move |s| {
                 if let Some(c) = get_current_container(s) {
-                    tx_requests.blocking_send(KantoRequest::StopContainer(c.name.clone(), 5)).expect("IO thread dead");
+                    tx_requests.blocking_send(KantoRequest::StopContainer(c.name.clone(), 5)); // add error handling
                 }
             }))
             .button("Remove", clone!(tx_requests => move |s| {
                 if let Some(c) = get_current_container(s) {
-                    tx_requests.blocking_send(KantoRequest::RemoveContainer(c.name.clone())).expect("IO thread dead");
+                    tx_requests.blocking_send(KantoRequest::RemoveContainer(c.name.clone())); // add error handling
                 }
             }))
     );
