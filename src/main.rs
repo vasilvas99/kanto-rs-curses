@@ -78,7 +78,7 @@ fn run_ui(
                 .align(HAlign::Right)
                 .width_percent(20)
         })
-        .column(ContainerColumn::Running, "Running", |c| {
+        .column(ContainerColumn::State, "State", |c| {
             c.align(HAlign::Center)
         });
 
