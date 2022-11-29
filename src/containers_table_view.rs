@@ -114,7 +114,8 @@ pub fn show_logs(siv: &mut cursive::Cursive, logs: String) {
     let logs_view = Dialog::around(TextView::new(logs))
         .title("Container Logs")
         .button("Ok", |s| try_best(s.pop_layer()))
-        .scrollable();
+        .scrollable()
+        .scroll_y(true);
 
     siv.add_layer(logs_view);
 }
@@ -133,7 +134,7 @@ pub fn set_cursive_theme(siv: &mut cursive::CursiveRunnable) {
             palette[Primary] = White.dark();
             palette[TitlePrimary] = Blue.light();
             palette[Secondary] = Blue.light();
-            palette[Highlight] = Cyan.dark();
+            palette[Highlight] = Blue.dark();
         }),
     });
 }
