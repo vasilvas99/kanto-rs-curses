@@ -2,6 +2,9 @@
 use tokio::net::UnixStream;
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
+use std::path::Path;
+use strip_ansi_escapes::strip;
+
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub type ClientChannel = cm_rpc::containers_client::ContainersClient<tonic::transport::Channel>;
 
@@ -87,4 +90,13 @@ pub async fn remove_container(channel: &mut ClientChannel, id: &str, force: bool
     });
     let _r = channel.remove(_r).await?;
     Ok(())
+}
+
+// Warning! This function currently uses system paths since the author is not aware of a way to obtains logs via grpc from CM.
+// This should be considered an unstable feature since the paths used bellow are not guaranteed to be the same as well.
+pub async fn get_container_logs(id: &str) -> Result<String> {
+    let log_path = Path::new("/var/lib/container-management/containers/").join(id).join("json.log");
+    let buf = strip(tokio::fs::read(log_path).await?)?; // Kanto loggers leave console control chars so they have to stripped
+    let contents =  String::from_utf8_lossy(&buf).to_string();
+    Ok(contents)
 }
