@@ -1,7 +1,11 @@
+use crate::kanto_api;
 use cursive::align::HAlign;
 use cursive_table_view::{TableView, TableViewItem};
-use crate::kanto_api;
 use std::cmp::Ordering;
+
+pub type CTView = TableView<ContainersTable, ContainerColumn>;
+
+pub static TABLE_IDENTIFIER: &'static str = "table";
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum ContainerColumn {
@@ -74,4 +78,27 @@ pub fn generate_table_view() -> TableView<ContainersTable, ContainerColumn> {
                 .width_percent(20)
         })
         .column(ContainerColumn::State, "State", |c| c.align(HAlign::Center))
+}
+
+pub fn update_table_items(siv: &mut cursive::Cursive, list: Vec<kanto_api::Container>) {
+    let mut t = siv.find_name::<CTView>(TABLE_IDENTIFIER).expect("Crap");
+    let last_item = t.item();
+    // Cache the position of the table selector
+    t.set_items(items_to_columns(list));
+    if let Some(idx) = last_item {
+        // If such a position existed, set it where it was
+        t.set_selected_item(idx);
+    }
+}
+
+pub fn get_current_container(s: &mut cursive::Cursive) -> Option<ContainersTable> {
+    let t = s.find_name::<CTView>(TABLE_IDENTIFIER).expect("Crap");
+
+    if let Some(container_idx) = t.item() {
+        if let Some(container) = t.borrow_item(container_idx) {
+            return Some(container.clone()); // small enough struct to be worth it
+        }
+    }
+
+    None
 }

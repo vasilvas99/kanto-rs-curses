@@ -45,6 +45,8 @@ pub async fn create_container(
 }
 
 pub async fn get_container_by_name(channel: &mut ClientChannel, name: &str) -> Result<Container> {
+    // DEPRECATED: Should not be used in general as names in kanto-cm are not guaranteed to be unique
+    // This would return the first match
     let all_containers = list_containers(channel).await?;
     eprintln!("{:#?}", name);
     let cont = all_containers
