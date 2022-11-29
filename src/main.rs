@@ -1,14 +1,9 @@
-use cursive::align::HAlign;
 use cursive::views::Dialog;
 use cursive::{traits::*, Cursive};
 use cursive_table_view::TableView;
-use kantocurses::{kanto_api, clone};
-use std::cmp::Ordering;
+use kantocurses::{kanto_api, containers_table_view as table};
 use tokio::sync::mpsc;
 use nix::unistd::Uid;
-
-pub mod containers_table_view;
-use containers_table_view::*;
 
 #[derive(Debug)]
 enum KantoRequest {
@@ -39,22 +34,22 @@ async fn tokio_main(
                     kanto_api::create_container(&mut c, &name, &registry).await?;
                 }
                 KantoRequest::StartContainer(name) => {
-                    kanto_api::start_container(&mut c, &name).await; // add error handling
+                    kanto_api::start_container(&mut c, &name).await; // add err state consumption
                 }
                 KantoRequest::StopContainer(name, timeout) => {
-                    kanto_api::stop_container(&mut c, &name, timeout).await; // add error handling
+                    kanto_api::stop_container(&mut c, &name, timeout).await; // add err state consumption
                 }
                 KantoRequest::RemoveContainer(name) => {
-                    kanto_api::remove_container(&mut c, &name, true).await; // add error handling
+                    kanto_api::remove_container(&mut c, &name, true).await; // add err state consumption
                 }
             }
         }
     }
 }
 
-fn get_current_container(s: &mut Cursive) -> Option<ContainersTable> {
+fn get_current_container(s: &mut Cursive) -> Option<table::ContainersTable> {
     let t = s
-        .find_name::<TableView<ContainersTable, ContainerColumn>>("table")
+        .find_name::<TableView<table::ContainersTable, table::ContainerColumn>>("table")
         .expect("Crap");
 
     if let Some(container_idx) = t.item() {
@@ -69,39 +64,43 @@ fn run_ui(
     tx_requests: mpsc::Sender<KantoRequest>,
     mut rx_containers: mpsc::Receiver<Vec<kanto_api::Container>>,
 ) -> kanto_api::Result<()> {
+    
     let mut siv = cursive::default();
-    let table = TableView::<ContainersTable, ContainerColumn>::new()
-        .column(ContainerColumn::ID, "ID", |c| c.width_percent(20))
-        .column(ContainerColumn::Name, "Name", |c| c.align(HAlign::Center))
-        .column(ContainerColumn::Image, "Image", |c| {
-            c.ordering(Ordering::Greater)
-                .align(HAlign::Right)
-                .width_percent(20)
-        })
-        .column(ContainerColumn::State, "State", |c| {
-            c.align(HAlign::Center)
-        });
+    
+    // Split in a function
+    let table = table::generate_table_view();
+
+    let start_cb = enclose::enclose!((tx_requests) move |s: &mut Cursive| {
+        if let Some(c) = get_current_container(s) {
+            tx_requests.blocking_send(KantoRequest::StartContainer(c.name.clone())); // add err state consumption
+        }
+    });
+
+    let stop_cb = enclose::enclose!((tx_requests) move |s: &mut Cursive| {
+        if let Some(c) = get_current_container(s) {
+            tx_requests.blocking_send(KantoRequest::StopContainer(c.name.clone(), 5)); // add err state consumption
+        }
+    });
+    
+    let remove_cb = enclose::enclose!((tx_requests)move |s: &mut Cursive| {
+        if let Some(c) = get_current_container(s) {
+            tx_requests.blocking_send(KantoRequest::RemoveContainer(c.name.clone())); // add err state consumption
+        }
+    });
 
     siv.add_layer(
         Dialog::around(table.with_name("table").min_size((100, 150)))
             .title("Kanto-CM curses")
             // .button("Create", |_s| { todo!() })
-            .button("Start",  clone!(tx_requests => move |s| {
-                if let Some(c) = get_current_container(s) {
-                    tx_requests.blocking_send(KantoRequest::StartContainer(c.name.clone())); // add error handling
-                }
-            }))
-            .button("Stop", clone!(tx_requests => move |s| {
-                if let Some(c) = get_current_container(s) {
-                    tx_requests.blocking_send(KantoRequest::StopContainer(c.name.clone(), 5)); // add error handling
-                }
-            }))
-            .button("Remove", clone!(tx_requests => move |s| {
-                if let Some(c) = get_current_container(s) {
-                    tx_requests.blocking_send(KantoRequest::RemoveContainer(c.name.clone())); // add error handling
-                }
-            }))
+            .button("[S]tart",  start_cb.clone())
+            .button("Sto[P]", stop_cb.clone())
+            .button("[R]emove", remove_cb.clone())
     );
+
+    // Add keyboard shortcuts
+    siv.add_global_callback('s', start_cb.clone());
+    siv.add_global_callback('p', stop_cb.clone());
+    siv.add_global_callback('r', remove_cb.clone());
 
     siv.set_fps(5);
 
@@ -113,10 +112,10 @@ fn run_ui(
         match rx_containers.try_recv() {
             Ok(val) => {
                 let mut t = s
-                    .find_name::<TableView<ContainersTable, ContainerColumn>>("table")
+                    .find_name::<TableView<table::ContainersTable, table::ContainerColumn>>("table")
                     .expect("Crap");
                 let last_item = t.item(); // Cache the position of the table selector
-                t.set_items(items_to_columns(val));
+                t.set_items(table::items_to_columns(val));
                 if let Some(idx) = last_item {
                     // If such a position existed, set it where it was
                     t.set_selected_item(idx);

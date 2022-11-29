@@ -3,7 +3,6 @@ name = "kanto-curses"
 version = "0.1.0"
 edition = "2021"
 authors = ["Vasil Ivanov ivanovvasil99@gmail.com"]
-license = "GPL2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -26,8 +25,9 @@ hyper = { version = "0.14", features = ["full"] }
 serde = { version = "1.0.147", features = ["derive"] }
 serde_json = { version = "1.0.89", default-features = false, features = ["alloc"] }
 cursive_table_view = "0.14.0"
-# glib = "0.16.3"
+glib = "0.16.3"
 nix = "0.25.0"
+enclose = "1.1.8"
 
 [dependencies.cursive]
 version = "0.20.0"
