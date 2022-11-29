@@ -1,22 +1,24 @@
+use clap::Parser;
 use cursive::views::Dialog;
 use cursive::{traits::*, Cursive};
 use kantocurses::{containers_table_view as table, kanto_api, try_best};
 use nix::unistd::Uid;
 use tokio::sync::mpsc;
-use clap::Parser;
 
 #[derive(Parser, Debug)]
-#[command(version, about="A TUI for Kanto CM that allows easier management of deployed containers")]
+#[command(
+    version,
+    about = "A TUI for Kanto CM that allows easier management of deployed containers"
+)]
 struct CliArgs {
-   /// Set the path to the kanto-cm UNIX socket
-   #[arg(short, long, default_value_t=String::from("/run/container-management/container-management.sock"))]
-   socket: String,
+    /// Set the path to the kanto-cm UNIX socket
+    #[arg(short, long, default_value_t=String::from("/run/container-management/container-management.sock"))]
+    socket: String,
 
-   /// Time before sending a SIGKILL after a SIGTERM to a container (seconds)
-   #[arg(short, long, default_value_t = 5)]
-   timeout: u8,
+    /// Time before sending a SIGKILL after a SIGTERM to a container (seconds)
+    #[arg(short, long, default_value_t = 5)]
+    timeout: u8,
 }
-
 
 #[derive(Debug)]
 enum KantoRequest {
@@ -25,7 +27,7 @@ enum KantoRequest {
     StartContainer(String),           // ID
     StopContainer(String, i64),       // ID, timeout
     RemoveContainer(String),          // ID
-    GetLogs(String),                 // ID
+    GetLogs(String),                  // ID
 }
 
 #[derive(Debug)]
@@ -65,7 +67,7 @@ async fn tokio_main(
                 KantoRequest::GetLogs(id) => {
                     let logs = match kanto_api::get_container_logs(&id).await {
                         Ok(logs) => logs,
-                        Err(_) => "Could not obtain logs".to_string()
+                        Err(_) => "Could not obtain logs".to_string(),
                     };
                     try_best(response_tx.send(KantoResponse::GetLogs(logs)).await);
                 }
@@ -77,7 +79,7 @@ async fn tokio_main(
 fn run_ui(
     tx_requests: mpsc::Sender<KantoRequest>,
     mut rx_responses: mpsc::Receiver<KantoResponse>,
-    timeout: i64
+    timeout: i64,
 ) -> kanto_api::Result<()> {
     let mut siv = cursive::default();
 
@@ -120,7 +122,7 @@ fn run_ui(
         .button("Sto[P]", stop_cb.clone())
         .button("[R]emove", remove_cb.clone())
         .button("[L]ogs", get_logs_cb.clone())
-        .button("[Q]uit", |s| s.quit())
+        .button("[Q]uit", |s| s.quit()),
     );
 
     // Add keyboard shortcuts
@@ -138,7 +140,7 @@ fn run_ui(
         if let Some(resp) = rx_responses.blocking_recv() {
             match resp {
                 KantoResponse::ListContainers(list) => table::update_table_items(s, list),
-                KantoResponse::GetLogs(logs)=> table::show_logs(s, logs)
+                KantoResponse::GetLogs(logs) => table::show_logs(s, logs),
             }
         }
     });

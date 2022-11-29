@@ -1,6 +1,6 @@
 use crate::{kanto_api, try_best};
+use cursive::align::HAlign;
 use cursive::view::Scrollable;
-use cursive::{align::HAlign};
 use cursive::views::{Dialog, TextView};
 use cursive_table_view::{TableView, TableViewItem};
 use std::cmp::Ordering;
@@ -83,7 +83,9 @@ pub fn generate_table_view() -> TableView<ContainersTable, ContainerColumn> {
 }
 
 pub fn update_table_items(siv: &mut cursive::Cursive, list: Vec<kanto_api::Container>) {
-    let mut t = siv.find_name::<CTView>(TABLE_IDENTIFIER).expect("Wrong table identifier?");
+    let mut t = siv
+        .find_name::<CTView>(TABLE_IDENTIFIER)
+        .expect("Wrong table identifier?");
     let last_item = t.item();
     // Cache the position of the table selector
     t.set_items(items_to_columns(list));
@@ -94,7 +96,9 @@ pub fn update_table_items(siv: &mut cursive::Cursive, list: Vec<kanto_api::Conta
 }
 
 pub fn get_current_container(s: &mut cursive::Cursive) -> Option<ContainersTable> {
-    let t = s.find_name::<CTView>(TABLE_IDENTIFIER).expect("Wrong table identifier?");
+    let t = s
+        .find_name::<CTView>(TABLE_IDENTIFIER)
+        .expect("Wrong table identifier?");
 
     if let Some(container_idx) = t.item() {
         if let Some(container) = t.borrow_item(container_idx) {
@@ -107,7 +111,9 @@ pub fn get_current_container(s: &mut cursive::Cursive) -> Option<ContainersTable
 
 pub fn show_logs(siv: &mut cursive::Cursive, logs: String) {
     let logs_view = Dialog::around(TextView::new(logs))
-                    .button("Ok", |s| try_best(s.pop_layer()))
-                    .scrollable();
+        .title("Container Logs")
+        .button("Ok", |s| try_best(s.pop_layer()))
+        .scrollable();
+
     siv.add_layer(logs_view);
-}   
+}
