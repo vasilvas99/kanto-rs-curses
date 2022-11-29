@@ -2,7 +2,7 @@
 
 An attempt at a TUI for kanto-cm
 
-![Screenshot](/misc/kantocmcursesss.png)
+![Screenshot](/misc/kantocmcurses-ss.png)
 
 Requires root to bind to kanto-cm unix socket. To capture stderr in a file since ncurses otherwise cleans-up the terminal after a crash:
 ```bash
