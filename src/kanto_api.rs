@@ -58,7 +58,9 @@ pub async fn get_container_by_name(channel: &mut ClientChannel, name: &str) -> R
 }
 
 pub async fn start_container(channel: &mut ClientChannel, id: &str) -> Result<()> {
-    let _r = tonic::Request::new(cm_rpc::StartContainerRequest { id: String::from(id) });
+    let _r = tonic::Request::new(cm_rpc::StartContainerRequest {
+        id: String::from(id),
+    });
     let _r = channel.start(_r).await?;
     Ok(())
 }
@@ -70,13 +72,19 @@ pub async fn stop_container(channel: &mut ClientChannel, id: &str, timeout: i64)
         signal: String::from("SIGTERM"),
     });
 
-    let _r = tonic::Request::new(cm_rpc::StopContainerRequest { id: String::from(id) , stop_options });
+    let _r = tonic::Request::new(cm_rpc::StopContainerRequest {
+        id: String::from(id),
+        stop_options,
+    });
     let _r = channel.stop(_r).await?;
     Ok(())
 }
 
 pub async fn remove_container(channel: &mut ClientChannel, id: &str, force: bool) -> Result<()> {
-    let _r = tonic::Request::new(cm_rpc::RemoveContainerRequest { id: String::from(id), force });
+    let _r = tonic::Request::new(cm_rpc::RemoveContainerRequest {
+        id: String::from(id),
+        force,
+    });
     let _r = channel.remove(_r).await?;
     Ok(())
 }

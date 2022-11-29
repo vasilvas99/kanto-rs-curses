@@ -11,7 +11,7 @@ enum KantoRequest {
     StartContainer(String),           // ID
     StopContainer(String, i64),       // ID, timeout
     RemoveContainer(String),          // ID
-    _GetLogs(String),                  // ID
+    _GetLogs(String),                 // ID
 }
 
 #[derive(Debug)]
@@ -34,7 +34,7 @@ async fn tokio_main(
                 // Handle errors io thread! Otherwise the whole thing crashes a lot!
                 KantoRequest::ListContainers => {
                     let r = kantocurses::kanto_api::list_containers(&mut c).await?;
-                    try_best(response_tx.send(KantoResponse::ListContainers(r)).await)
+                    try_best(response_tx.send(KantoResponse::ListContainers(r)).await);
                 }
                 KantoRequest::_CreateContainer(id, registry) => {
                     try_best(kanto_api::create_container(&mut c, &id, &registry).await);
@@ -43,11 +43,11 @@ async fn tokio_main(
                     try_best(kanto_api::start_container(&mut c, &id).await);
                 }
                 KantoRequest::StopContainer(id, timeout) => {
-                    try_best(kanto_api::stop_container(&mut c, &id, timeout).await)
+                    try_best(kanto_api::stop_container(&mut c, &id, timeout).await);
                 }
                 KantoRequest::RemoveContainer(id) => {
-                    try_best(kanto_api::remove_container(&mut c, &id, true).await)
-                },
+                    try_best(kanto_api::remove_container(&mut c, &id, true).await);
+                }
                 _ => {}
             }
         }
@@ -71,7 +71,7 @@ fn run_ui(
 
     let stop_cb = enclose::enclose!((tx_requests) move |s: &mut Cursive| {
         if let Some(c) = table::get_current_container(s) {
-            try_best(tx_requests.blocking_send(KantoRequest::StopContainer(c.id.clone(), 5)))
+            try_best(tx_requests.blocking_send(KantoRequest::StopContainer(c.id.clone(), 5)));
         }
     });
 
@@ -82,12 +82,16 @@ fn run_ui(
     });
 
     siv.add_layer(
-        Dialog::around(table.with_name(table::TABLE_IDENTIFIER).min_size((100, 150)))
-            .title("Kanto-CM curses")
-            // .button("Create", |_s| { todo!() })
-            .button("[S]tart", start_cb.clone())
-            .button("Sto[P]", stop_cb.clone())
-            .button("[R]emove", remove_cb.clone()),
+        Dialog::around(
+            table
+                .with_name(table::TABLE_IDENTIFIER)
+                .min_size((100, 150)),
+        )
+        .title("Kanto-CM curses")
+        // .button("Create", |_s| { todo!() })
+        .button("[S]tart", start_cb.clone())
+        .button("Sto[P]", stop_cb.clone())
+        .button("[R]emove", remove_cb.clone()),
     );
 
     // Add keyboard shortcuts
