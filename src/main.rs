@@ -9,9 +9,9 @@ use nix::unistd::Uid;
 enum KantoRequest {
     ListContainers,
     _CreateContainer(String, String), // Name, Registry
-    StartContainer(String),           // Name
-    StopContainer(String, i64),       // Name, timeout
-    RemoveContainer(String),          // Name
+    StartContainer(String),           // ID
+    StopContainer(String, i64),       // ID, timeout
+    RemoveContainer(String),          // ID
 }
 
 #[cfg(unix)]
@@ -30,17 +30,17 @@ async fn tokio_main(
                     let r = kantocurses::kanto_api::list_containers(&mut c).await?;
                     response_tx.send(r).await?;
                 }
-                KantoRequest::_CreateContainer(name, registry) => {
-                    kanto_api::create_container(&mut c, &name, &registry).await?;
+                KantoRequest::_CreateContainer(id, registry) => {
+                    kanto_api::create_container(&mut c, &id, &registry).await?;
                 }
-                KantoRequest::StartContainer(name) => {
-                    kanto_api::start_container(&mut c, &name).await; // add err state consumption
+                KantoRequest::StartContainer(id) => {
+                    kanto_api::start_container(&mut c, &id).await; // add err state consumption
                 }
-                KantoRequest::StopContainer(name, timeout) => {
-                    kanto_api::stop_container(&mut c, &name, timeout).await; // add err state consumption
+                KantoRequest::StopContainer(id, timeout) => {
+                    kanto_api::stop_container(&mut c, &id, timeout).await; // add err state consumption
                 }
-                KantoRequest::RemoveContainer(name) => {
-                    kanto_api::remove_container(&mut c, &name, true).await; // add err state consumption
+                KantoRequest::RemoveContainer(id) => {
+                    kanto_api::remove_container(&mut c, &id, true).await; // add err state consumption
                 }
             }
         }
@@ -72,19 +72,19 @@ fn run_ui(
 
     let start_cb = enclose::enclose!((tx_requests) move |s: &mut Cursive| {
         if let Some(c) = get_current_container(s) {
-            tx_requests.blocking_send(KantoRequest::StartContainer(c.name.clone())); // add err state consumption
+            tx_requests.blocking_send(KantoRequest::StartContainer(c.id.clone())); // add err state consumption
         }
     });
 
     let stop_cb = enclose::enclose!((tx_requests) move |s: &mut Cursive| {
         if let Some(c) = get_current_container(s) {
-            tx_requests.blocking_send(KantoRequest::StopContainer(c.name.clone(), 5)); // add err state consumption
+            tx_requests.blocking_send(KantoRequest::StopContainer(c.id.clone(), 5)); // add err state consumption
         }
     });
     
     let remove_cb = enclose::enclose!((tx_requests)move |s: &mut Cursive| {
         if let Some(c) = get_current_container(s) {
-            tx_requests.blocking_send(KantoRequest::RemoveContainer(c.name.clone())); // add err state consumption
+            tx_requests.blocking_send(KantoRequest::RemoveContainer(c.id.clone())); // add err state consumption
         }
     });
 
