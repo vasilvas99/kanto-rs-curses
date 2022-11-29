@@ -83,6 +83,8 @@ fn run_ui(
 ) -> kanto_api::Result<()> {
     let mut siv = cursive::default();
 
+    table::set_cursive_theme(&mut siv);
+
     // Split in a function
     let table = table::generate_table_view();
 

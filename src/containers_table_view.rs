@@ -2,6 +2,7 @@ use crate::{kanto_api, try_best};
 use cursive::align::HAlign;
 use cursive::view::Scrollable;
 use cursive::views::{Dialog, TextView};
+use cursive::With;
 use cursive_table_view::{TableView, TableViewItem};
 use std::cmp::Ordering;
 
@@ -116,4 +117,23 @@ pub fn show_logs(siv: &mut cursive::Cursive, logs: String) {
         .scrollable();
 
     siv.add_layer(logs_view);
+}
+
+pub fn set_cursive_theme(siv: &mut cursive::CursiveRunnable) {
+    siv.set_theme(cursive::theme::Theme {
+        shadow: true,
+        borders: cursive::theme::BorderStyle::Simple,
+        palette: cursive::theme::Palette::default().with(|palette| {
+            use cursive::theme::BaseColor::*;
+            use cursive::theme::Color::TerminalDefault;
+            use cursive::theme::PaletteColor::*;
+
+            palette[Background] = TerminalDefault;
+            palette[View] = TerminalDefault;
+            palette[Primary] = White.dark();
+            palette[TitlePrimary] = Blue.light();
+            palette[Secondary] = Blue.light();
+            palette[Highlight] = Cyan.dark();
+        }),
+    });
 }

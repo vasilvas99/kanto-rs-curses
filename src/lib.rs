@@ -1,5 +1,5 @@
-pub mod kanto_api;
 pub mod containers_table_view;
+pub mod kanto_api;
 
 pub fn try_best<T>(err: T) {
     // Used to consume Err variants where they can be safely ignored.
