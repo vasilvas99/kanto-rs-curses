@@ -116,7 +116,7 @@ fn run_ui(
         Dialog::around(
             table
                 .with_name(table::TABLE_IDENTIFIER)
-                .min_size((200, 200)),
+                .min_size((400, 400)),
         )
         .title("Kanto-CM curses")
         .button("[S]tart", start_cb.clone())
