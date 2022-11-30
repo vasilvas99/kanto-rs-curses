@@ -4,6 +4,15 @@ use strip_ansi_escapes::strip;
 use tokio::net::UnixStream;
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
+use tokio::{
+    fs::File,
+    io::{
+        AsyncBufReadExt,
+        BufReader
+    }
+};
+
+
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub type ClientChannel = cm_rpc::containers_client::ContainersClient<tonic::transport::Channel>;
@@ -92,13 +101,36 @@ pub async fn remove_container(channel: &mut ClientChannel, id: &str, force: bool
     Ok(())
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+struct KantoLogLine {
+    stream: String,
+    log: String,
+    time: String,
+}
+
+// Strips the console control characters and updates the log string
+fn strip_and_push(line: &KantoLogLine, log: &mut String) {
+    let stripped: Vec<u8> = strip(line.log.clone()).unwrap();
+    log.push_str(String::from_utf8_lossy(&stripped).as_ref());
+}
+
 // Warning! This function currently uses system paths since the author is not aware of a way to obtains logs via grpc from CM.
 // This should be considered an unstable feature since the paths used bellow are not guaranteed to be the same as well.
+// Speed can also be a concern as a lot of parsing and stripping of control characters is required.
 pub async fn get_container_logs(id: &str) -> Result<String> {
     let log_path = Path::new("/var/lib/container-management/containers/")
         .join(id)
         .join("json.log");
-    let buf = strip(tokio::fs::read(log_path).await?)?; // Kanto loggers leave console control chars so they have to stripped
-    let contents = String::from_utf8_lossy(&buf).to_string();
-    Ok(contents)
+    let file_handle = File::open(log_path).await?;
+    let mut lines = BufReader::new(file_handle).lines();
+
+    let mut parsed_log = String::from("");
+    while let Some(line) = lines.next_line().await? {
+        let parsed_line = serde_json::from_str(&line);
+        if let Ok(line_json) = parsed_line {
+            strip_and_push(&line_json, &mut parsed_log);
+        }
+    }
+
+    Ok(parsed_log)
 }

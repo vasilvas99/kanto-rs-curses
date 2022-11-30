@@ -112,14 +112,9 @@ fn run_ui(
         }
     });
 
-    siv.add_layer(
-        Dialog::around(
-            table
-                .with_name(table::TABLE_IDENTIFIER)
-                .min_size((200, 200)),
-        )
+    siv.add_fullscreen_layer(
+        Dialog::around(table.with_name(table::TABLE_IDENTIFIER).min_size((200, 200)))
         .title("Kanto-CM curses")
-        // .button("Create", |_s| { todo!() })
         .button("[S]tart", start_cb.clone())
         .button("Sto[P]", stop_cb.clone())
         .button("[R]emove", remove_cb.clone())
@@ -134,7 +129,7 @@ fn run_ui(
     siv.add_global_callback('l', get_logs_cb.clone());
     siv.add_global_callback('q', |s| s.quit());
 
-    siv.set_fps(3);
+    siv.set_fps(5);
 
     // Do a similar cleanup to buttons
     siv.add_global_callback(cursive::event::Event::Refresh, move |s| {
