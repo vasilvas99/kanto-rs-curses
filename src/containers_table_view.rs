@@ -71,15 +71,11 @@ pub fn items_to_columns(req_items: Vec<kanto_api::Container>) -> Vec<ContainersT
     out
 }
 
-pub fn generate_table_view() -> TableView<ContainersTable, ContainerColumn> {
-    TableView::<ContainersTable, ContainerColumn>::new()
-        .column(ContainerColumn::ID, "ID", |c| c.width_percent(20))
+pub fn generate_table_view() -> CTView {
+    CTView::new()
+        .column(ContainerColumn::ID, "ID", |c| c.align(HAlign::Center))
         .column(ContainerColumn::Name, "Name", |c| c.align(HAlign::Center))
-        .column(ContainerColumn::Image, "Image", |c| {
-            c.ordering(Ordering::Greater)
-                .align(HAlign::Right)
-                .width_percent(20)
-        })
+        .column(ContainerColumn::Image, "Image", |c| c.align(HAlign::Center))
         .column(ContainerColumn::State, "State", |c| c.align(HAlign::Center))
 }
 
