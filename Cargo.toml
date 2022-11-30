@@ -1,5 +1,5 @@
 [package]
-name = "kanto-curses"
+name = "kantui"
 version = "0.1.0"
 edition = "2021"
 authors = ["Vasil Ivanov ivanovvasil99@gmail.com"]
@@ -7,11 +7,11 @@ authors = ["Vasil Ivanov ivanovvasil99@gmail.com"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "kantocurses"
+name = "kantui"
 path = "src/lib.rs"
 
 [[bin]]
-name = "kantocurses"
+name = "kantui"
 path = "src/main.rs"
 
 [dependencies]

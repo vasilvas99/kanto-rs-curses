@@ -1,7 +1,7 @@
 use clap::Parser;
 use cursive::views::Dialog;
 use cursive::{traits::*, Cursive};
-use kantocurses::{containers_table_view as table, kanto_api, try_best};
+use kantui::{containers_table_view as table, kanto_api, try_best};
 use nix::unistd::Uid;
 use tokio::sync::mpsc;
 
@@ -52,7 +52,7 @@ async fn tokio_main(
         if let Some(request) = request_rx.recv().await {
             match request {
                 KantoRequest::ListContainers => {
-                    let r = kantocurses::kanto_api::list_containers(&mut c).await?;
+                    let r = kantui::kanto_api::list_containers(&mut c).await?;
                     try_best(response_tx.send(KantoResponse::ListContainers(r)).await);
                 }
                 KantoRequest::_CreateContainer(id, registry) => {
@@ -121,7 +121,7 @@ fn run_ui(
                 .with_name(table::TABLE_IDENTIFIER)
                 .min_size((400, 400)),
         )
-        .title("Kanto-CM curses")
+        .title("Kanto Container Management")
         .button("[S]tart", start_cb.clone())
         .button("Sto[P]", stop_cb.clone())
         .button("[R]emove", remove_cb.clone())
