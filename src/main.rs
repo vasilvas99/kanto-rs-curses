@@ -113,7 +113,11 @@ fn run_ui(
     });
 
     siv.add_fullscreen_layer(
-        Dialog::around(table.with_name(table::TABLE_IDENTIFIER).min_size((200, 200)))
+        Dialog::around(
+            table
+                .with_name(table::TABLE_IDENTIFIER)
+                .min_size((200, 200)),
+        )
         .title("Kanto-CM curses")
         .button("[S]tart", start_cb.clone())
         .button("Sto[P]", stop_cb.clone())

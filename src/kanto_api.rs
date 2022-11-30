@@ -2,17 +2,12 @@ use std::path::Path;
 use strip_ansi_escapes::strip;
 #[cfg(unix)]
 use tokio::net::UnixStream;
-use tonic::transport::{Endpoint, Uri};
-use tower::service_fn;
 use tokio::{
     fs::File,
-    io::{
-        AsyncBufReadExt,
-        BufReader
-    }
+    io::{AsyncBufReadExt, BufReader},
 };
-
-
+use tonic::transport::{Endpoint, Uri};
+use tower::service_fn;
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub type ClientChannel = cm_rpc::containers_client::ContainersClient<tonic::transport::Channel>;
