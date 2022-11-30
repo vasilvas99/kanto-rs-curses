@@ -36,6 +36,10 @@ enum KantoResponse {
     GetLogs(String),
 }
 
+/// IO Thread
+/// Parses requests from the UI thread sent to the request channel and sends the results
+/// back to the response channel. This two-channel architecture allows us to set up non-blocking
+/// communication between async and sync code.
 #[cfg(unix)]
 #[tokio::main]
 async fn tokio_main(
@@ -47,7 +51,6 @@ async fn tokio_main(
     loop {
         if let Some(request) = request_rx.recv().await {
             match request {
-                // Handle errors io thread! Otherwise the whole thing crashes a lot!
                 KantoRequest::ListContainers => {
                     let r = kantocurses::kanto_api::list_containers(&mut c).await?;
                     try_best(response_tx.send(KantoResponse::ListContainers(r)).await);
@@ -76,6 +79,7 @@ async fn tokio_main(
     }
 }
 
+/// Setup the user interface and start the UI thread
 fn run_ui(
     tx_requests: mpsc::Sender<KantoRequest>,
     mut rx_responses: mpsc::Receiver<KantoResponse>,
@@ -85,7 +89,6 @@ fn run_ui(
 
     table::set_cursive_theme(&mut siv);
 
-    // Split in a function
     let table = table::generate_table_view();
 
     let start_cb = enclose::enclose!((tx_requests) move |s: &mut Cursive| {
@@ -100,13 +103,13 @@ fn run_ui(
         }
     });
 
-    let remove_cb = enclose::enclose!((tx_requests)move |s: &mut Cursive| {
+    let remove_cb = enclose::enclose!((tx_requests) move |s: &mut Cursive| {
         if let Some(c) = table::get_current_container(s) {
             try_best(tx_requests.blocking_send(KantoRequest::RemoveContainer(c.id.clone())));
         }
     });
 
-    let get_logs_cb = enclose::enclose!((tx_requests)move |s: &mut Cursive| {
+    let get_logs_cb = enclose::enclose!((tx_requests) move |s: &mut Cursive| {
         if let Some(c) = table::get_current_container(s) {
             try_best(tx_requests.blocking_send(KantoRequest::GetLogs(c.id.clone())));
         }
@@ -135,13 +138,12 @@ fn run_ui(
 
     siv.set_fps(5);
 
-    // Do a similar cleanup to buttons
     siv.add_global_callback(cursive::event::Event::Refresh, move |s| {
         try_best(tx_requests.blocking_send(KantoRequest::ListContainers));
         if let Some(resp) = rx_responses.blocking_recv() {
             match resp {
                 KantoResponse::ListContainers(list) => table::update_table_items(s, list),
-                KantoResponse::GetLogs(logs) => table::show_logs(s, logs),
+                KantoResponse::GetLogs(logs) => table::show_logs_view(s, logs),
             }
         }
     });
@@ -167,5 +169,6 @@ fn main() -> kanto_api::Result<()> {
     });
 
     run_ui(tx_requests, rx_responses, args.timeout as i64)?;
+
     Ok(())
 }

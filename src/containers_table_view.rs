@@ -106,7 +106,7 @@ pub fn get_current_container(s: &mut cursive::Cursive) -> Option<ContainersTable
     None
 }
 
-pub fn show_logs(siv: &mut cursive::Cursive, logs: String) {
+pub fn show_logs_view(siv: &mut cursive::Cursive, logs: String) {
     let logs_view = Dialog::around(TextView::new(logs))
         .title("Container Logs")
         .button("Ok", |s| try_best(s.pop_layer()))

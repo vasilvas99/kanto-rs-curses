@@ -12,8 +12,8 @@ use tower::service_fn;
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub type ClientChannel = cm_rpc::containers_client::ContainersClient<tonic::transport::Channel>;
 
+// This is a re-export to allow for the compilation and inclusion of deeply nested protobufs
 mod containers {
-    //This is a hack because tonic has an issue with deeply nested protobufs
     tonic::include_proto!("mod");
 }
 pub use containers::github::com::eclipse_kanto::container_management::containerm::api::services::containers::{self as cm_rpc, CreateContainerResponse};
@@ -52,10 +52,7 @@ pub async fn create_container(
 }
 
 pub async fn get_container_by_name(channel: &mut ClientChannel, name: &str) -> Result<Container> {
-    // DEPRECATED: Should not be used in general as names in kanto-cm are not guaranteed to be unique
-    // This would return the first match
     let all_containers = list_containers(channel).await?;
-    eprintln!("{:#?}", name);
     let cont = all_containers
         .into_iter()
         .find(|c| c.name == name)
